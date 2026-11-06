@@ -1,0 +1,163 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Student {
+  id                   String                  @id @default(cuid())
+  name                 String
+  phone                String
+  email                String                  @unique
+  gender               String
+  qualification        String
+  branch               String
+  graduationYear       Int
+  cgpa                 Float
+  backlogs             Int                     @default(0)
+  technicalSkills      String                  // JSON string array or comma separated
+  resumeUrl            String
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  registrations        PlacementRegistration[]
+  resumeAnalyses       ResumeAnalysis[]
+  eligibilityResults   EligibilityResult[]
+}
+
+model PlacementDrive {
+  id                   String                  @id @default(cuid())
+  name                 String
+  driveDate            DateTime
+  registrationDeadline DateTime
+  status               String                  @default("Active") // Active, Inactive, Completed, Registration Closed
+  description          String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  companies            DriveCompany[]
+  registrations        PlacementRegistration[]
+  eligibilityResults   EligibilityResult[]
+}
+
+model Company {
+  id                 String              @id @default(cuid())
+  name               String
+  logo               String?             // URL or local asset path
+  description        String
+  active             Boolean             @default(true)
+  status             String              @default("Active") // Active, Inactive, Registration Closed
+  website            String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  jobRoles           JobRole[]
+  drives             DriveCompany[]
+  eligibilityResults EligibilityResult[]
+}
+
+model JobRole {
+  id                    String              @id @default(cuid())
+  companyId             String
+  company               Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleName              String
+  description           String?
+  minimumCgpa           Float
+  qualifications        String              // JSON array e.g. ["B.Tech", "B.E.", "MCA"]
+  branches              String              // JSON array e.g. ["CSE", "IT", "AI & ML"]
+  graduationYears       String              // JSON array e.g. [2026, 2027] or "2026+"
+  requiredSkills        String              // JSON array e.g. ["Programming", "DSA", "Java"]
+  preferredSkills       String              // JSON array e.g. ["Cloud", "Docker", "SQL"]
+  backlogRequirement    Int                 @default(0) // Maximum allowed backlogs
+  experienceRequirement String              @default("Fresher") // "Fresher", "0-1 Years"
+  salaryPackage         String?             // e.g. "8.5 LPA"
+  applicationDeadline   DateTime?
+  driveDate             DateTime?
+  active                Boolean             @default(true)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  eligibilityResults    EligibilityResult[]
+}
+
+model DriveCompany {
+  id               String         @id @default(cuid())
+  placementDriveId String
+  placementDrive   PlacementDrive @relation(fields: [placementDriveId], references: [id], onDelete: Cascade)
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+
+  @@unique([placementDriveId, companyId])
+}
+
+model ResumeAnalysis {
+  id                      String   @id @default(cuid())
+  studentId               String
+  student                 Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  extractedName           String?
+  extractedEducation      String   // JSON string
+  extractedDegree         String?
+  extractedBranch         String?
+  extractedGradYear       Int?
+  extractedCgpa           Float?
+  extractedSkills         String   // JSON array
+  extractedLanguages      String   // JSON array
+  extractedFrameworks     String   // JSON array
+  extractedCertifications String   // JSON array
+  extractedProjects       String   // JSON array
+  extractedExperience     String   // JSON array
+  extractedAchievements   String   // JSON array
+  rawText                 String?
+  mismatchWarnings        String   // JSON array of mismatch warning strings/objects
+  analyzedAt              DateTime @default(now())
+}
+
+model EligibilityResult {
+  id               String         @id @default(cuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  placementDriveId String
+  placementDrive   PlacementDrive @relation(fields: [placementDriveId], references: [id], onDelete: Cascade)
+  companyId        String
+  company          Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  jobRoleId        String
+  jobRole          JobRole        @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  status           String         // "Eligible", "Partially Eligible", "Not Eligible"
+  score            Float          // 0 to 100 percentage
+  matchedCriteria  String         // JSON array of matched reasons
+  missingCriteria  String         // JSON array of missing criteria / reasons
+  explanation      String         // Detailed explanation string
+  createdAt        DateTime       @default(now())
+
+  @@unique([studentId, placementDriveId, jobRoleId])
+}
+
+model PlacementRegistration {
+  id               String         @id @default(cuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  placementDriveId String
+  placementDrive   PlacementDrive @relation(fields: [placementDriveId], references: [id], onDelete: Cascade)
+  registrationId   String         @unique // e.g. "PD-2026-00124"
+  status           String         @default("Registered") // Registered, Shortlisted, In Review, Selected
+  confirmed        Boolean        @default(true)
+  submittedAt      DateTime       @default(now())
+
+  @@unique([studentId, placementDriveId])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin") // "admin", "placement_officer"
+  createdAt    DateTime @default(now())
+}

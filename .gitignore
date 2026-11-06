@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Local environment and credentials
+.env*
+!.env.example
+*.pem
+*.key
+
+# Local databases and generated files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.tsbuildinfo
+*.log
+
+# User data and uploads
+public/uploads/
+public/data/
